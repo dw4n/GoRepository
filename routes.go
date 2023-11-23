@@ -4,8 +4,11 @@ package main
 import (
 	"gorepository/model"
 	"gorepository/repository"
+	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
 func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
@@ -14,11 +17,89 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 	postRepo := repos.PostRepo
 
 	app.Get("/users", func(c *fiber.Ctx) error {
-		users, err := userRepo.GetAll()
+		// Parse pagination parameters
+		page, err := strconv.Atoi(c.Query("page", "1"))
+		if err != nil || page < 1 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid page number"})
+		}
+
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "10"))
+		if err != nil || pageSize <= 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid page size"})
+		}
+
+		// This could be multiple query parameters or a single comma-separated parameter
+		sortParams := c.Query("sort", "Name ASC")
+		sortColumns := strings.Split(sortParams, ",")
+
+		// Handle any potential conversion errors
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid pagination parameters"})
+		}
+
+		conditions := []func(*gorm.DB) *gorm.DB{
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("is_deleted = ?", false)
+			},
+		}
+
+		// Add sorting and pagination options
+		opts := []repository.Option{
+			repository.WithSorting(sortColumns),
+			repository.WithPaging(page, pageSize),
+		}
+
+		var users []model.User
+		err = repos.UserRepo.GetAllWithConditions(&users, conditions, opts...)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot fetch users"})
 		}
+
 		return c.JSON(users)
+	})
+
+	app.Get("/post/user/:id", func(c *fiber.Ctx) error {
+		userID, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user ID"})
+		}
+
+		// Parse pagination parameters
+		page, err := strconv.Atoi(c.Query("page", "1"))
+		if err != nil || page < 1 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid page number"})
+		}
+
+		pageSize, err := strconv.Atoi(c.Query("pageSize", "10"))
+		if err != nil || pageSize <= 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid page size"})
+		}
+
+		// Parse sorting parameters
+		sortParams := c.Query("sort", "posts.created_at ASC")
+		sortColumns := strings.Split(sortParams, ",")
+
+		conditions := []func(*gorm.DB) *gorm.DB{
+			func(db *gorm.DB) *gorm.DB {
+				return db.Joins("JOIN users ON users.id = posts.user_id").
+					Select("posts.*, users.name as user_name").
+					Where("posts.user_id = ?", userID)
+			},
+		}
+
+		// Add sorting and pagination options
+		opts := []repository.Option{
+			repository.WithSorting(sortColumns),
+			repository.WithPaging(page, pageSize),
+		}
+
+		var posts []model.PostWithUserName // Define a slice to store the result
+		err = repos.PostRepo.GetAllWithConditions(&posts, conditions, opts...)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot fetch posts"})
+		}
+
+		return c.JSON(posts)
 	})
 
 	app.Post("/user", func(c *fiber.Ctx) error {

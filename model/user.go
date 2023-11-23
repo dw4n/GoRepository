@@ -4,12 +4,8 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	Name  string
-	Email string `gorm:"unique"`
+	Name      string
+	Email     string `gorm:"unique"`
+	IsDeleted bool
 	// Add other fields as needed
-}
-
-// TableName sets the insert table name for this struct type
-func (u *User) TableName() string {
-	return "user"
 }
