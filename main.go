@@ -25,11 +25,10 @@ func main() {
 	// Migrate the schema
 	db.AutoMigrate(&model.User{}, &model.Post{})
 
-	userRepo := repository.NewUserRepository(db)
-	postRepo := repository.NewPostRepository(db)
+	repos := repository.NewRepositories(db)
 
 	// Update the call to SetupRoutes to pass both repositories
-	SetupRoutes(app, userRepo, postRepo)
+	SetupRoutes(app, repos)
 
 	app.Listen(":3000")
 }

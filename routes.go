@@ -8,7 +8,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(app *fiber.App, userRepo repository.UserRepository, postRepo repository.PostRepository) {
+func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
+
+	userRepo := repos.UserRepo
+	postRepo := repos.PostRepo
 
 	app.Get("/users", func(c *fiber.Ctx) error {
 		users, err := userRepo.GetAll()
