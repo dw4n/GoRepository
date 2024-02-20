@@ -1,8 +1,13 @@
 package main
 
 import (
+	"os"
+
 	"gorepository/model"
 	"gorepository/repository"
+	"gorepository/routes"
+
+	"github.com/joho/godotenv"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
@@ -10,12 +15,19 @@ import (
 )
 
 func main() {
+	// Load environment variables from .env file
+	err := godotenv.Load()
+	if err != nil {
+		panic("Failed to load environment variables")
+	}
+
 	app := fiber.New(fiber.Config{
 		AppName:           "identity front end api",
 		EnablePrintRoutes: true,
 	})
 
-	dsn := "host=localhost user=postgres password=admin dbname=goblog port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	// Retrieve connection string from environment variables
+	dsn := os.Getenv("DATABASE_URL")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -28,7 +40,7 @@ func main() {
 	repos := repository.NewRepositories(db)
 
 	// Update the call to SetupRoutes to pass both repositories
-	SetupRoutes(app, repos)
+	routes.SetupRoutes(app, repos)
 
 	app.Listen(":3000")
 }

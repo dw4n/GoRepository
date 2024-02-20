@@ -1,5 +1,5 @@
 // routes.go
-package main
+package routes
 
 import (
 	"gorepository/model"
@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -44,13 +45,13 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 		}
 
 		// Add sorting and pagination options
-		opts := []repository.Option{
+		opts := []repository.GORMOption{
 			repository.WithSorting(sortColumns),
 			repository.WithPaging(page, pageSize),
 		}
 
 		var users []model.User
-		err = repos.UserRepo.GetAllWithConditions(&users, conditions, opts...)
+		err = repos.UserRepo.GetWithConditions(&users, conditions, opts...)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot fetch users"})
 		}
@@ -88,13 +89,13 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 		}
 
 		// Add sorting and pagination options
-		opts := []repository.Option{
+		opts := []repository.GORMOption{
 			repository.WithSorting(sortColumns),
 			repository.WithPaging(page, pageSize),
 		}
 
 		var posts []model.PostWithUserName // Define a slice to store the result
-		err = repos.PostRepo.GetAllWithConditions(&posts, conditions, opts...)
+		err = repos.PostRepo.GetWithConditions(&posts, conditions, opts...)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot fetch posts"})
 		}
@@ -117,12 +118,18 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 	})
 
 	app.Get("/users/:id", func(c *fiber.Ctx) error {
-		id, err := c.ParamsInt("id")
+		id := c.Params("id")
+		var err error // Declare the "err" variable
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
 		}
 
-		user, err := userRepo.FindByID(uint(id))
+		userID, err := uuid.Parse(id) // Parse string ID into uuid.UUID
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
+		}
+
+		user, err := userRepo.FindByID(userID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "user not found"})
 		}
@@ -151,12 +158,18 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 	})
 
 	app.Delete("/users/:id", func(c *fiber.Ctx) error {
-		id, err := c.ParamsInt("id")
+		id := c.Params("id")
+		var err error // Declare the "err" variable
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
 		}
 
-		err = userRepo.Delete(uint(id))
+		userID, err := uuid.Parse(id) // Parse string ID into uuid.UUID
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
+		}
+
+		err = userRepo.Delete(userID) // Pass the parsed userID to userRepo.Delete
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot delete user"})
 		}
@@ -190,12 +203,18 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 
 	// Route for getting a single post by ID
 	app.Get("/posts/:id", func(c *fiber.Ctx) error {
-		id, err := c.ParamsInt("id")
+		id := c.Params("id")
+		var err error // Declare the "err" variable
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
 		}
 
-		post, err := postRepo.FindByID(uint(id))
+		postID, err := uuid.Parse(id) // Parse string ID into uuid.UUID
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
+		}
+
+		post, err := postRepo.FindByID(postID) // Pass the parsed postID to postRepo.FindByID
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "post not found"})
 		}
@@ -224,14 +243,19 @@ func SetupRoutes(app *fiber.App, repos *repository.Repositories) {
 		return c.JSON(updatedPost)
 	})
 
-	// Route for deleting a post
 	app.Delete("/posts/:id", func(c *fiber.Ctx) error {
-		id, err := c.ParamsInt("id")
+		id := c.Params("id")
+		var err error // Declare the "err" variable
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
 		}
 
-		err = postRepo.Delete(uint(id))
+		postID, err := uuid.Parse(id) // Parse string ID into uuid.UUID
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
+		}
+
+		err = postRepo.Delete(postID) // Pass the parsed postID to postRepo.Delete
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cannot delete post"})
 		}

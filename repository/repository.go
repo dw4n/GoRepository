@@ -14,7 +14,7 @@ type Repositories struct {
 
 func NewRepositories(db *gorm.DB) *Repositories {
 	return &Repositories{
-		UserRepo: NewGenericRepository[model.User](db),
-		PostRepo: NewGenericRepository[model.Post](db),
+		UserRepo: NewGenericRepository[model.User](db, nil),
+		PostRepo: NewGenericRepository[model.Post](db, nil),
 	}
 }

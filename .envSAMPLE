@@ -1,0 +1,1 @@
+DATABASE_URL=host=localhost user=postgres password=admin dbname=goblog port=5432 sslmode=disable TimeZone=Asia/Shanghai
